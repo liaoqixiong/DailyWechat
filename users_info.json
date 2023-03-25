@@ -4,7 +4,13 @@
       "user_name": "小雄",
       "user_id": "o2pFk6iccBddVJ6fFoKoqr9w-uAs",
       "born_date": "1996-11-24",
+      "city": "宝安"
+    },
+    {
+      "user_name": "小雄",
+      "user_id": "o2pFk6iccBddVJ6fFoKoqr9w-uAs",
+      "born_date": "1996-11-24",
       "city": "抚州"
-    }
+    },
   ]
 }
