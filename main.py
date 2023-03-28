@@ -5,6 +5,7 @@ import requests
 import os
 import random
 import json
+from zhdate import ZhDate as lunar_date
 
 nowtime = datetime.utcnow() + timedelta(hours=8)  
 today = datetime.strptime(str(nowtime.date()), "%Y-%m-%d")
@@ -35,15 +36,41 @@ def get_weather(city):
     return weather
 
 def get_count(born_date):
-    delta = today - datetime.strptime(born_date, "%Y-%m-%d")
+    # 农历转阳历
+    year = int(born_date.split("-")[0])
+    month = int(born_date.split("-")[1])
+    day = int(born_date.split("-")[2])
+    date_yangli = lunar_date(year, month, day)  # 农历
+    print("y=%d, m=%d, d=%d" %(year, month, day))
+    ymd_yangli = str(date_yangli.to_datetime()).split(" ")[0]
+    print("born_date yl = %s" % ymd_yangli)
+    delta = today - datetime.strptime(ymd_yangli, "%Y-%m-%d")
+    print("delta %d" %delta.days)
     return delta.days
 
 
 def get_birthday(birthday):
     nextdate = datetime.strptime(str(today.year) + "-" + birthday, "%Y-%m-%d")
-    if nextdate < today:
-        nextdate = nextdate.replace(year=nextdate.year + 1)
-    return (nextdate - today).days
+    next_ymd_nongli = str(nextdate).split(" ")[0]
+    year = int(next_ymd_nongli.split("-")[0])
+    month = int(next_ymd_nongli.split("-")[1])
+    day = int(next_ymd_nongli.split("-")[2])
+    next_yangli = lunar_date(year, month, day)
+    next_ymd_yangli = next_yangli.to_datetime()
+    print("next_ymd_yangli--- %s, %s" %(type(next_ymd_yangli), next_ymd_yangli))
+    print("type %s, next: %s, y=%d, m=%d, d=%d" %(type(nextdate), nextdate, year, month, day))
+    if next_ymd_yangli < today:
+        nextdate = nextdate.replace(year=nextdate.year + 1)  # next year
+        next2_ymd_nongli = str(nextdate).split(" ")[0]
+        year2 = int(next2_ymd_nongli.split("-")[0])
+        month2 = int(next2_ymd_nongli.split("-")[1])
+        day2 = int(next2_ymd_nongli.split("-")[2])
+        next2_yangli = lunar_date(year2, month2, day2)
+        next_ymd_yangli = next2_yangli.to_datetime()
+        print("2.next %s, %s, (%d-%d-%d), %s" %(type(nextdate), nextdate, year2, month2, day2, next_ymd_yangli))
+    rev = (next_ymd_yangli - today).days
+    print("rev = %s, %s" %(type(rev), rev))
+    return rev
 
 client = WeChatClient(app_id, app_secret)
 wm = WeChatMessage(client)
