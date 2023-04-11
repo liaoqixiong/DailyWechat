@@ -13,6 +13,7 @@ today = datetime.strptime(str(nowtime.date()), "%Y-%m-%d")
 app_id = os.getenv("APP_ID")
 app_secret = os.getenv("APP_SECRET")
 template_id = os.getenv("TEMPLATE_ID")
+DAILY_KEY_STR = "5e08bea90f6a43ad88511ba9d88cc722"
 
 def get_time():
     dictDate = {'Monday': '星期一', 'Tuesday': '星期二', 'Wednesday': '星期三', 'Thursday': '星期四',
@@ -29,11 +30,36 @@ def get_words():
 def get_random_color():
     return "#%06x" % random.randint(0, 0xFFFFFF)
 
-def get_weather(city):
-    url = "https://v0.yiketianqi.com/api?unescape=1&version=v91&appid=43656176&appsecret=I42og6Lm&city=" + city
+def get_city_id(city):
+    url = "https://geoapi.qweather.com/v2/city/lookup?location=" + city + "&key=" + DAILY_KEY_STR
     res = requests.get(url).json()
-    weather = res['data'][0]
+    id = res['location'][0]['id']
+    # print(id)
+    return id
+
+def get_weather(city_id):
+    url = "https://devapi.qweather.com/v7/weather/3d?location=" + city_id + "&key=" + DAILY_KEY_STR
+    #print(url)
+    res = requests.get(url).json()
+    weather = res['daily'][0]
+    # print(weather)
     return weather
+
+def get_air_quality(city_id):
+    url = "https://devapi.qweather.com/v7/air/5d?location=" + city_id + "&key=" + DAILY_KEY_STR
+    #print(url)
+    res = requests.get(url).json()
+    air = res['daily'][0]
+    # print(air)
+    return air
+
+def get_ultroviolet(city_id):
+    url = "https://devapi.qweather.com/v7/indices/1d?type=5&location="+ city_id + "&key=" + DAILY_KEY_STR
+    #print(url)
+    res = requests.get(url).json()
+    uv = res['daily'][0]
+    #print(uv)
+    return uv
 
 def get_count(born_date):
     # 农历转阳历
@@ -41,11 +67,11 @@ def get_count(born_date):
     month = int(born_date.split("-")[1])
     day = int(born_date.split("-")[2])
     date_yangli = lunar_date(year, month, day)  # 农历
-    print("y=%d, m=%d, d=%d" %(year, month, day))
+    # print("y=%d, m=%d, d=%d" %(year, month, day))
     ymd_yangli = str(date_yangli.to_datetime()).split(" ")[0]
-    print("born_date yl = %s" % ymd_yangli)
+    # print("born_date yl = %s" % ymd_yangli)
     delta = today - datetime.strptime(ymd_yangli, "%Y-%m-%d")
-    print("delta %d" %delta.days)
+    # print("delta %d" %delta.days)
     return delta.days
 
 
@@ -57,8 +83,8 @@ def get_birthday(birthday):
     day = int(next_ymd_nongli.split("-")[2])
     next_yangli = lunar_date(year, month, day)
     next_ymd_yangli = next_yangli.to_datetime()
-    print("next_ymd_yangli--- %s, %s" %(type(next_ymd_yangli), next_ymd_yangli))
-    print("type %s, next: %s, y=%d, m=%d, d=%d" %(type(nextdate), nextdate, year, month, day))
+    # print("next_ymd_yangli--- %s, %s" %(type(next_ymd_yangli), next_ymd_yangli))
+    # print("type %s, next: %s, y=%d, m=%d, d=%d" %(type(nextdate), nextdate, year, month, day))
     if next_ymd_yangli < today:
         nextdate = nextdate.replace(year=nextdate.year + 1)  # next year
         next2_ymd_nongli = str(nextdate).split(" ")[0]
@@ -67,9 +93,9 @@ def get_birthday(birthday):
         day2 = int(next2_ymd_nongli.split("-")[2])
         next2_yangli = lunar_date(year2, month2, day2)
         next_ymd_yangli = next2_yangli.to_datetime()
-        print("2.next %s, %s, (%d-%d-%d), %s" %(type(nextdate), nextdate, year2, month2, day2, next_ymd_yangli))
+        # print("2.next %s, %s, (%d-%d-%d), %s" %(type(nextdate), nextdate, year2, month2, day2, next_ymd_yangli))
     rev = (next_ymd_yangli - today).days
-    print("rev = %s, %s" %(type(rev), rev))
+    # print("rev = %s, %s" %(type(rev), rev))
     return rev
 
 client = WeChatClient(app_id, app_secret)
@@ -86,8 +112,11 @@ for user_info in data:
     city = user_info['city']
     user_id = user_info['user_id']
     name=user_info['user_name'].upper()
-    
-    weather= get_weather(city)
+
+    city_id = get_city_id(city)
+    weather = get_weather(city_id)
+    air = get_air_quality(city_id)
+    uv = get_ultroviolet(city_id)
 
     data = dict()
     data['time'] = {
@@ -99,7 +128,7 @@ for user_info in data:
         'color': get_random_color()
         }
     data['weather'] = {
-        'value': weather['wea'], 
+        'value': weather['textDay'],
         'color': '#002fa4'
         }
     data['city'] = {
@@ -107,11 +136,11 @@ for user_info in data:
         'color': get_random_color()
         }
     data['tem_high'] = {
-        'value': weather['tem1'], 
+        'value': weather['tempMax'],
         'color': '#D44848'
         }
     data['tem_low'] = {
-        'value': weather['tem2'], 
+        'value': weather['tempMin'],
         'color': '#01847F'
         }
     data['born_days'] = {
@@ -123,11 +152,11 @@ for user_info in data:
         'color': get_random_color()
         }
     data['air'] = {
-        'value': weather['air_level'], 
+        'value': air['category'],
         'color': get_random_color()
         }
     data['wind'] = {
-        'value': weather['win'][0], 
+        'value': weather['windDirDay'],
         'color': get_random_color()
         }
     data['name'] = {
@@ -135,7 +164,7 @@ for user_info in data:
         'color': get_random_color()
         }
     data['uv'] = {
-        'value': weather['uvDescription'], 
+        'value': uv['category'],
         'color': get_random_color()
         }
     
